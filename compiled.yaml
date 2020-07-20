@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jenkins-master-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jenkins-master-deployment
+  template:
+    metadata:
+      labels:
+        app: jenkins-master-deployment
+    spec:
+      containers:
+      - image: saravana2412/jenkins-master
+        imagePullPolicy: Always
+        name: jenkins-master-deployment
+        ports:
+        - name: http-port
+          containerPort: 8080
+        volumeMounts:
+          # name must match the volume name below
+          - name: task-pv-claim
+            mountPath: "/var/jenkins-home"
+      volumes:
+      - name: task-pv-claim
+        persistentVolumeClaim:
+          claimName: task-pv-claim
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jenkins-master-cluster-ip
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: jenkins-master-deployment
+  type: ClusterIP
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: jenkins-master-ingress
+spec:
+  rules:
+  - http:
+      paths:
+      - backend:
+          serviceName: jenkins-master-cluster-ip
+          servicePort: 80
+        path: /
